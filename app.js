@@ -20,7 +20,6 @@ app.use(express.static("public"));
 // Debugging: Log environment variables to verify they are loaded correctly
 console.log("EMAIL_USER:", process.env.EMAIL_USER);
 console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "Loaded" : "Not Loaded");
-console.log;
 
 // POST route to handle form submission
 app.post("/send-email", async (req, res) => {
@@ -67,4 +66,5 @@ app.post("/send-email", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
 
