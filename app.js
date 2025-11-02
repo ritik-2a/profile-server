@@ -2,7 +2,7 @@ if (process.env.NODE_ENV !== "production") {
   require("dotenv").config({ path: "./profile-server.env" });
 } // Load environment variables
 const cors = require("cors");
-
+require("dotenv").config();
 const express = require("express");
 const nodemailer = require("nodemailer");
 
@@ -67,3 +67,4 @@ app.post("/send-email", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
