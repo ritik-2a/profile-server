@@ -1,38 +1,49 @@
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config({ path: "./profile-server.env" });
-} // Load environment variables
-//const cors = require("cors");
+}
 require("dotenv").config();
+
 const express = require("express");
+const cors = require("cors");
 const nodemailer = require("nodemailer");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON requests
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
-
-// Serve static files from the "public" directory
 app.use(express.static("public"));
 
-// Debugging: Log environment variables to verify they are loaded correctly
-console.log("EMAIL_USER:", process.env.EMAIL_USER);
-console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "Loaded" : "Not Loaded");
+console.log("EMAIL_USER:", process.env.EMAIL_USER || "(not set)");
+console.log("EMAIL_PASS:", process.env.EMAIL_PASS ? "Loaded" : "NOT LOADED");
 
-// POST route to handle form submission
+app.get("/", (_req, res) => {
+  res.json({
+    status: "ok",
+    emailConfigured: Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS),
+  });
+});
+
 app.post("/send-email", async (req, res) => {
-  const { name, email, mob, message } = req.body;
+  const { name, email, mob, subject, message } = req.body;
 
   if (!name || !email || !mob || !message) {
-    return res.status(400).json({ error: "All fields are required." });
+    return res
+      .status(400)
+      .json({ error: "Name, email, phone and message are required." });
   }
 
-  // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     return res.status(400).json({ error: "Invalid email format." });
+  }
+
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.error("Email credentials not configured on server.");
+    return res.status(500).json({
+      error: "Email service is not configured. Please contact the site owner.",
+    });
   }
 
   try {
@@ -44,15 +55,24 @@ app.post("/send-email", async (req, res) => {
       },
     });
 
+    const mailSubject =
+      subject && subject.length
+        ? `Portfolio Contact: ${subject}`
+        : "New Contact Form Submission";
+
     const mailOptions = {
-      from: email,
+      from: `"${name}" <${process.env.EMAIL_USER}>`,
       to: process.env.EMAIL_USER,
-      subject: "New Contact Form Submission",
-      text: `Name: ${name}\nEmail: ${email}\nPhone: ${mob}\n\nMessage: ${message}`,
+      replyTo: email,
+      subject: mailSubject,
+      text: `Name: ${name}\nEmail: ${email}\nPhone: ${mob}\nSubject: ${
+        subject || "(none)"
+      }\n\nMessage:\n${message}`,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    res.status(200).json({ success: "Email sent successfully!", info });
+    console.log("Email sent:", info.messageId);
+    res.status(200).json({ success: "Email sent successfully!" });
   } catch (error) {
     console.error("Error sending email:", error);
     res.status(500).json({
@@ -62,10 +82,6 @@ app.post("/send-email", async (req, res) => {
   }
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
-
-
-
